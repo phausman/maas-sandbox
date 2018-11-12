@@ -51,7 +51,6 @@ Vagrant.configure("2") do |config|
         :libvirt__network_name => 'maas-mgmt-network',
         :libvirt__dhcp_enabled => false,
         :dhcp_enabled => false,
-        # :management_network_mode => 'none',
         :autostart => true
 
       node.vm.provider :libvirt do |domain|
@@ -62,7 +61,6 @@ Vagrant.configure("2") do |config|
         boot_network = {'network' => 'maas-mgmt-network'}
         domain.boot boot_network
         domain.boot 'hd'
-        # domain.mgmt_attach = "false"
         domain.management_network_name = "libvirt-mgmt-network"
         domain.autostart = true
 
