@@ -1,0 +1,109 @@
+---
+- hosts: all
+  remote_user: root
+  gather_facts: False
+  become: yes
+  
+  vars:
+    default_maas_url: "{{ default_maas_url }}"
+    kvm_host_user: "{{ kvm_host_user }}"
+    kvm_host_ip: "{{ kvm_host_ip }}"
+
+
+  tasks:
+  - name: install python2
+    raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
+
+
+  # Reconfigure server API address
+  # sudo dpkg-reconfigure maas-region-controller
+
+  - name: pre-seed the debconf database prior to installing maas-common
+    debconf:
+      name: maas-common
+      question: maas/default-maas-url
+      value: "{{ default_maas_url }}"
+      vtype: string
+
+  - name: pre-seed the debconf database prior to installing maas-region-controller
+    debconf:
+      name: maas-region-controller
+      question: maas/default-maas-url
+      value: "{{ default_maas_url }}"
+      vtype: string
+
+
+  # Install and configure maas
+
+  - name: ensure maas and companion packages are installed
+    apt:
+      name: "{{ packages }}"
+    vars:
+      packages:
+      - maas
+      - jq
+      state: present
+
+  - name: create maas admin user
+    raw: maas-region apikey --username=admin || (maas-region createadmin --username admin --password admin --email admin@maas.local)
+
+  - name: generate ssh key
+    become_user: vagrant
+    become: yes
+    command: ssh-keygen -q -t rsa -f /home/vagrant/.ssh/id_rsa -N ""
+    args: 
+      creates: '/home/vagrant/.ssh/id_rsa'
+
+  - name: import ssh key for admin user
+    shell: |
+      maas login admin http://localhost:5240/MAAS $(sudo maas apikey --username admin)
+      maas admin sshkeys read | grep "$(</home/vagrant/.ssh/id_rsa.pub)" || (maas admin sshkeys create "key=$(</home/vagrant/.ssh/id_rsa.pub)")
+    args:
+      executable: /bin/bash
+
+  - name: set kernel parameters for automatic power configuration during enlisting
+    shell: |
+      maas login admin http://localhost:5240/MAAS $(sudo maas apikey --username admin)
+      maas admin maas set-config name=kernel_opts value="power_type=virsh power_address=qemu+ssh://{{ kvm_host_user }}@{{ kvm_host_ip }}/system"
+    args:
+      executable: /bin/bash
+
+  - name: add xenial image
+    shell: |
+      maas login admin http://localhost:5240/MAAS $(sudo maas apikey --username admin)
+      maas admin boot-source-selections create 1 os="ubuntu" release="xenial" arches="amd64" subarches="ga-16.04" labels="*"
+      maas admin boot-resources import
+    args:
+      executable: /bin/bash
+
+  - name: create .ssh directory in home directory of user maas
+    file: 
+      path: ~maas/.ssh
+      owner: maas
+      group: maas
+      state: directory
+      
+  - name: copy private key to maas user home directory
+    copy:
+      src: id_rsa
+      dest: ~maas/.ssh/id_rsa
+      owner: maas
+      group: maas
+      mode: u=rw,g=,o=
+
+  - name: copy updated enlist_userdata for automatic enlisting with virsh power type
+    copy:
+      src: enlist_userdata
+      dest: /etc/maas/preseeds/enlist_userdata
+      owner: root
+      group: root
+      mode: u=rw,g=r,o=r
+
+  - name: copy local scripts available for user vagrant
+    copy:
+      src: set-ip-mode-dhcp.sh
+      dest: ~vagrant/set-ip-mode-dhcp.sh
+      owner: vagrant
+      group: vagrant
+      mode: u=rwx,g=r,o=r
+
