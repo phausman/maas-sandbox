@@ -43,10 +43,17 @@ Vagrant.configure("2") do |config|
   end
 
   # PXE nodes
-  (1..4).each do |i|
+  (1..5).each do |i|
     config.vm.define "node-#{i}" do |node|
 
-      node.vm.network :private_network, ip: "10.14.0.#{i+100}",
+      node.vm.network :private_network, ip: "10.1.1.#{i+1}",
+        :libvirt__netmask => "255.255.255.0",
+        :libvirt__forward_mode => 'nat',
+        :libvirt__network_name => 'public-network',
+        :libvirt__dhcp_enabled => true,
+        :autostart => true
+
+      node.vm.network :private_network, ip: "10.1.0.#{i+100}",
         :libvirt__forward_mode => 'veryisolated',
         :libvirt__network_name => 'maas-mgmt-network',
         :libvirt__dhcp_enabled => false,
@@ -57,7 +64,8 @@ Vagrant.configure("2") do |config|
         domain.default_prefix = ""
         domain.cpus = "2"
         domain.memory = "4096"
-        domain.storage :file, :size => '16G', :type => 'qcow2'
+        domain.storage :file, :size => '16G'
+        domain.storage :file, :size => '20G'
         boot_network = {'network' => 'maas-mgmt-network'}
         domain.boot boot_network
         domain.boot 'hd'

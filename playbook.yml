@@ -1,18 +1,23 @@
 ---
 - hosts: all
   remote_user: root
-  gather_facts: False
+  gather_facts: no
   become: yes
   
   vars:
     default_maas_url: "{{ default_maas_url }}"
     kvm_host_user: "{{ kvm_host_user }}"
     kvm_host_ip: "{{ kvm_host_ip }}"
+    maas_admin_apikey: "{{ ansible_local['maas-server']['maas']['maas-admin-apikey'] }}"
 
 
   tasks:
+
   - name: install python2
     raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
+
+  - name: gathering facts
+    setup:
 
 
   # Reconfigure server API address
@@ -45,7 +50,10 @@
       state: present
 
   - name: create maas admin user
-    raw: maas-region apikey --username=admin || (maas-region createadmin --username admin --password admin --email admin@maas.local)
+    shell: |
+      maas-region apikey --username=admin || (maas-region createadmin --username admin --password admin --email admin@maas.local)
+    args:
+      executable: /bin/bash
 
   - name: generate ssh key
     become_user: vagrant
@@ -107,3 +115,50 @@
       group: vagrant
       mode: u=rwx,g=r,o=r
 
+  #
+  # Next steps
+  #
+
+  # Snap module will be available in Ansible 2.8, using `command` module for now (v2.6.5)
+  # - name: install juju
+  #   snap:
+  #     name: juju
+  #     classic: yes
+
+  - name: install Juju
+    command: snap install juju --classic
+
+  - name: create directory for Juju configuration
+    file:
+      path: ~vagrant/.local/share/juju
+      owner: vagrant
+      group: vagrant
+      state: directory
+
+  - name: "juju configuration: clouds.yaml"
+    template:
+      src: juju/clouds.yaml.j2
+      dest: ~vagrant/.local/share/juju/clouds.yaml
+      owner: vagrant
+      group: vagrant
+      mode: "u=rw,g=r,o=r"
+
+  - name: create directory for Ansible custom facts
+    file: state=directory recurse=yes path=/etc/ansible/facts.d
+
+  - name: generate /etc/ansible/facts.d/maas.fact
+    shell: |
+      echo -e "[maas]\nmaas-admin-apikey=$(sudo maas apikey --username admin)" > /etc/ansible/facts.d/maas-server.fact
+    args:
+      executable: /bin/bash
+
+  - name: Re-read facts after adding custom maas.fact
+    setup: filter=ansible_local
+
+  - name: "juju configuration: credentials.yaml"
+    template:
+      src: juju/credentials.yaml.j2
+      dest: ~vagrant/.local/share/juju/credentials.yaml
+      owner: vagrant
+      group: vagrant
+      mode: "u=rw,g=r,o=r"

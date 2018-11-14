@@ -62,7 +62,7 @@ Make sure that you have installed Vagrant and Ansible.
 
 8.  Now that DHCP in MAAS is enabled, deploy PXE machines. They will be controlled by MAAS.
 
-        (vagrant-host)$ vagrant up node-1 node-2 node-3 node-4 --provider libvirt
+        (vagrant-host)$ vagrant up node-1 node-2 node-3 node-4 node-5 --provider libvirt
     
     Observe how machines are booting via PXE and enlisting in MAAS.
 
@@ -76,7 +76,7 @@ Make sure that you have installed Vagrant and Ansible.
 
     **Web GUI:** 
 
-    In `Machines` menu, select all machines and click `Take action` → `Commission` → `Commission 4 machines`. 
+    In `Machines` menu, select all machines and click `Take action` → `Commission` → `Commission 5 machines`. 
     
     Observe how machines are commissioned in both virt-manager's VM window and in MAAS: see tab `Commissioning` for each node.
 
@@ -88,7 +88,76 @@ Make sure that you have installed Vagrant and Ansible.
         ./set-ip-mode-dhcp.sh node-2 fabric-0 192.168.121.0/24
         ./set-ip-mode-dhcp.sh node-3 fabric-0 192.168.121.0/24
         ./set-ip-mode-dhcp.sh node-4 fabric-0 192.168.121.0/24
+        ./set-ip-mode-dhcp.sh node-5 fabric-0 192.168.121.0/24
+        
+        ./set-ip-mode-dhcp.sh node-1 fabric-0 10.1.1.0/24
+        ./set-ip-mode-dhcp.sh node-2 fabric-0 10.1.1.0/24
+        ./set-ip-mode-dhcp.sh node-3 fabric-0 10.1.1.0/24
+        ./set-ip-mode-dhcp.sh node-4 fabric-0 10.1.1.0/24
+        ./set-ip-mode-dhcp.sh node-5 fabric-0 10.1.1.0/24
 
 11. (Optional) Deploy Ubuntu on a machine.
 
     Select `Take action` → `Deploy` on selected machine to deploy Ubuntu. Once the machine is in state `Deployed`, you can ssh to it from maas-server. In order to learn the IP address assigned by MAAS to this machine, check `DNS` menu.
+
+
+# Deploy OpenStack on top of MAAS    
+
+## Install and configure Juju
+
+To manually install and configure Juju on maas-server, run the following commands:
+
+        sudo snap install juju --classic
+        juju add-cloud
+        
+-   Cloud type: maas
+-   Cloud name: maas-cloud
+-   API endpoint url: http://10.1.0.1:5240/MAAS
+
+        juju add-credential maas-cloud
+        
+-   Credential name: maas-credential
+-   maas-oauth: \[copy from http://<maas-ip>:5240/MAAS/account/prefs/ or fetch via CLI: `sudo maas apikey --username=admin`\]
+
+Alternatively, the above can be automated with Ansible, and that is the approach I choose. See playbook.yml for details 
+such as generation of clouds.yaml and credentials.yaml.
+
+Then, bootstrap Juju to create a Juju Controller:
+
+        juju bootstrap maas-cloud maas-cloud-controller
+        
+## Install OpenStack with Juju
+
+For OpenStack deployment, I choose [openstack-base](https://jujucharms.com/openstack-base/) #57 bundle.
+
+        # Download and extract bundle
+        wget https://api.jujucharms.com/charmstore/v5/openstack-base/archive -O archive.zip
+        unzip archive.zip 
+        rm archive.zip
+        
+        # Customize bundle to fit the architecture
+        sed -i 's/eno2/ens7/g' bundle.yaml
+        sed -i 's/\/dev\/sdb/\/dev\/vdb/g' bundle.yaml
+        
+        # Deploy OpenStack
+        juju deploy bundle.yaml
+        
+        # Watch deployment
+        watch -c juju status --color
+        
+Once the deployment is finished, Juju will report all units in `active` state.
+
+![OpenStack deployed](juju/openstack-deployed.png "OpenStack deployed")
+
+## Accessing Openstack
+
+To find out what is the admin password and default domain for logging into OpenStack's Horizon, run the following
+commands: 
+
+        source novarc
+        env | grep OS_
+
+Run this command on maas-server to get the URL for OpenStack dashboard:
+
+        echo "http://$(juju run --unit openstack-dashboard/0 'unit-get public-address')/horizon" 
+
