@@ -80,7 +80,9 @@ Make sure that you have installed Vagrant and Ansible.
     
     Observe how machines are commissioned in both virt-manager's VM window and in MAAS: see tab `Commissioning` for each node.
 
-10. Post-commissioning configuration. 
+10. Post-commissioning configuration.
+
+    *Note: before running the following, make sure that node-1 has ens7 interface configured, i.e. it has defined fabric, vlan and subnet. If not, manually configure it so that it belongs to public-network (subnet 10.1.1.0/24).* 
 
     Update machines' interfaces connected to libvirt-mgmt-network so that they are handled by libvirt's DHCP. Run the following on maas-server.
 
