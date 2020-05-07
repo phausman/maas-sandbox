@@ -1,0 +1,39 @@
+series: bionic
+variables:
+  osd-devices: &osd-devices /dev/vdb
+  customize-failure-domain: &customize-failure-domain True
+  expected-osd-count: &expected-osd-count 3
+  expected-mon-count: &expected-mon-count 3
+
+machines:
+  "0":
+  "1":
+  "2":
+
+applications:
+  ceph-mon:
+    charm: cs:ceph-mon
+    num_units: 3
+    options:
+      expected-osd-count: *expected-osd-count
+      monitor-count: *expected-mon-count
+      customize-failure-domain: *customize-failure-domain
+    to:
+    - lxd:0
+    - lxd:1
+    - lxd:2
+
+  ceph-osd:
+    charm: cs:ceph-osd
+    num_units: 3
+    options:
+      osd-devices: *osd-devices
+      customize-failure-domain: *customize-failure-domain
+      autotune: false
+    to:
+    - '0'
+    - '1'
+    - '2'
+
+relations:
+  - [ ceph-osd, ceph-mon ]
