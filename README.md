@@ -11,23 +11,19 @@ architecture diagram.
 Make sure that you have installed Vagrant and vagrant-libvirt plugin. 
 For example, on Ubuntu 18.04, you can run:
         
-        sudo apt install -y virt-manager vagrant vagrant-libvirt
-        sudo reboot
+    sudo apt install -y virt-manager vagrant vagrant-libvirt
+    sudo reboot
 
 # How to deploy MAAS Sandbox
 
 1. Update the 'Configuration section' at the top of `Vagrantfile` so that it 
 matches your environment.
 
-   <!-- Make sure you update `HOST_USERNAME` and `HOST_IP` variables with the values 
-   specific for your host machine, which will run MAAS and nodes VMs (Cloud 
-   Nodes). -->
-
 2.  Add MAAS's public key to `authorized_hosts` on your host. This is 
 necessary for MAAS to be able to control power of the Cloud Nodes.
 
-Vagrant will automatically provision MAAS with the key that you generate in 
-this step. 
+    Vagrant will automatically provision MAAS with the key that you generate in 
+    this step. 
 
         (host)$ ssh-keygen -q -t rsa -f ./id_rsa -N ""
         (host)$ cat id_rsa.pub >> ~/.ssh/authorized_keys
@@ -70,8 +66,8 @@ by Vagrant.
 Now you can bootstrap a Juju Controller on one of the Cloud Nodes (typically 
 `node01`):
 
-        (host)$ vagrant ssh maas
-        (maas)$ juju bootstrap maas-cloud maas-cloud-controller
+    (host)$ vagrant ssh maas
+    (maas)$ juju bootstrap maas-cloud maas-cloud-controller
         
 ## Deploy OpenStack with Juju
 
@@ -79,20 +75,20 @@ For OpenStack deployment, I have chosen OpenStack Stein on Ubuntu Bionic
 [openstack-base #61](https://jaas.ai/openstack-base-61) bundle from the official 
 Juju charm store.
 
-        # Download the bundle
-        (maas)$ charm pull openstack-base-61 ~/openstack-base
+    # Download the bundle
+    (maas)$ charm pull openstack-base-61 ~/openstack-base
 
-        # Customize bundle to fit the architecture
-        (maas)$ sed -i 's/eno2/ens7/g' openstack-base/bundle.yaml
-        (maas)$ sed -i 's/\/dev\/sdb //g' openstack-base/bundle.yaml
-        
-        # Deploy OpenStack bundle
-        (maas)$ juju add-model openstack
-        (maas)$ juju deploy ./openstack-base/bundle.yaml
-        
-        # Watch the deployment
-        (maas)$ watch -c juju machines --color
-        (maas)$ watch -c juju status --color
+    # Customize bundle to fit the architecture
+    (maas)$ sed -i 's/eno2/ens7/g' openstack-base/bundle.yaml
+    (maas)$ sed -i 's/\/dev\/sdb //g' openstack-base/bundle.yaml
+
+    # Deploy OpenStack bundle
+    (maas)$ juju add-model openstack
+    (maas)$ juju deploy ./openstack-base/bundle.yaml
+
+    # Watch the deployment
+    (maas)$ watch -c juju machines --color
+    (maas)$ watch -c juju status --color
         
 Once the deployment is finished, Juju will report all units in `active` state.
 
@@ -102,14 +98,14 @@ Once the deployment is finished, Juju will report all units in `active` state.
 
 Get the IP address of OpenStack Dashboard and construct the URL to access it.
 
-        (maas)$ DASHBOARD_IP=$(juju run --unit openstack-dashboard/0 'unit-get public-address')
-        (maas)$ echo "http://${DASHBOARD_IP}/horizon/"
+    (maas)$ DASHBOARD_IP=$(juju run --unit openstack-dashboard/0 'unit-get public-address')
+    (maas)$ echo "http://${DASHBOARD_IP}/horizon/"
 
 Run the following commands to find out what is the admin password for logging 
 into OpenStack dashboard: 
 
-        (maas)$ source openstack-base/openrc
-        (maas)$ env | grep OS_PASSWORD
+    (maas)$ source openstack-base/openrc
+    (maas)$ env | grep OS_PASSWORD
 
 Login with:
 
@@ -119,8 +115,8 @@ Login with:
 
 You can also interact with OpenStack using CLI, e.g.:
 
-        (maas)$ sudo snap install openstackclients --classic
-        (maas)$ openstack catalog list
+    (maas)$ sudo snap install openstackclients --classic
+    (maas)$ openstack catalog list
 
 Check out more examples on how to create networks, images and instances at 
 [https://jaas.ai/openstack-base](https://jaas.ai/openstack-base).
@@ -135,24 +131,24 @@ the commands.
 Before deploying Kubernetes, destroy your `openstack` juju model, if you had 
 previously deployed OpenStack.
 
-        (maas)$ juju destroy-model openstack
+    (maas)$ juju destroy-model openstack
 
 For Kubernetes deployment, I have chosen 
 [kubernetes-core #1036](https://jaas.ai/kubernetes-core-1036) bundle from the 
 official Juju charm store.
 
-        # Download the bundle
-        (maas)$ charm pull kubernetes-core-1036 ~/kubernetes-core
+    # Download the bundle
+    (maas)$ charm pull kubernetes-core-1036 ~/kubernetes-core
 
-        # Customize bundle to fit the machines you actually have
-        (maas)$ sed -i 's/cores=4/cores=2/g' kubernetes-core/bundle.yaml
-        
-        # Deploy Kubernetes bundle
-        (maas)$ juju add-model kubernetes
-        (maas)$ juju deploy ./kubernetes-core/bundle.yaml
-        
-        # Watch the deployment
-        (maas)$ watch -c juju status --color
+    # Customize bundle to fit the machines you actually have
+    (maas)$ sed -i 's/cores=4/cores=2/g' kubernetes-core/bundle.yaml
+
+    # Deploy Kubernetes bundle
+    (maas)$ juju add-model kubernetes
+    (maas)$ juju deploy ./kubernetes-core/bundle.yaml
+
+    # Watch the deployment
+    (maas)$ watch -c juju status --color
 
 Once the deployment is finished, Juju will report all units in `active` state.
 
@@ -161,7 +157,6 @@ Once the deployment is finished, Juju will report all units in `active` state.
 Check out more examples on how to deploy Kubernetes workloads at  
 [https://jaas.ai/kubernetes-core](https://jaas.ai/kubernetes-core).
 
-
 # Deploy Ceph cluster on top of MAAS    
 
 If you haven't bootstrapped a Juju controller yet, go to the 
@@ -169,20 +164,21 @@ If you haven't bootstrapped a Juju controller yet, go to the
 the commands.
 
 Before deploying Kubernetes, destroy your `openstack` or `kubernetes` juju 
-model, if you had previously deployed OpenStack or Kubernetes with `juju destroy-model` command.
+model, if you had previously deployed OpenStack or Kubernetes with 
+`juju destroy-model` command.
 
 Example Ceph bundle has been provisioned onto `maas` machine by Vagrant.
 
-        # Deploy Ceph bundle
-        (maas)$ juju add-model ceph
-        (maas)$ juju deploy ./ceph/bundle.yaml
+    # Deploy Ceph bundle
+    (maas)$ juju add-model ceph
+    (maas)$ juju deploy ./ceph/bundle.yaml
 
-        # Watch the deployment
-        (maas)$ watch -c juju status --color
+    # Watch the deployment
+    (maas)$ watch -c juju status --color
 
 
 Once the deployment settles, you can interact with Ceph cluster from any 
 `ceph-mon` unit.
 
-        (maas)$ juju ssh ceph-mon/0
-        (ceph-mon/0)$ sudo ceph status
+    (maas)$ juju ssh ceph-mon/0
+    (ceph-mon/0)$ sudo ceph status
