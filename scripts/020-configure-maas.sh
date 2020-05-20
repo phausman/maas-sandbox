@@ -94,9 +94,16 @@ do
     sleep 3
 done
 
-# Wait for «Syncing to rack controller(s)»
-echo "Waiting 45s for imported images to finish «Syncing to rack controller(s)»"; 
-sleep 45
+# Wait until Rack Controller finishes syncing images
+echo "Waiting for Rack Controller to finish synchronizing the images "; 
+RACK_CONTROLLER_ID=$(maas root region-controllers read |
+  jq --raw-output '.[] | .system_id')
+while [ $(maas root rack-controller list-boot-images $RACK_CONTROLLER_ID |
+  jq --raw-output '.status') != "synced" ]
+do 
+    echo "MAAS Rack is still synchronizing images, waiting 10s..."
+    sleep 10
+done
 
 # Create nodeNN nodes
 echo "Creating machines..."
