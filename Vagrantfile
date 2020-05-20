@@ -26,14 +26,14 @@ OAM_RESERVED_RANGE_START = OAM_NETWORK_PREFIX + "1"
 OAM_RESERVED_RANGE_END   = OAM_NETWORK_PREFIX + "9"
 
 # Total number of Cloud Nodes
-CLOUD_NODES_COUNT = 5
+CLOUD_NODES_COUNT = 4
 
 # CPU and RAM configuration for Cloud Nodes
 # Adjust the values that would fit into your host's capacity. Note that if you 
 # want to deploy e.g. OpenStack on MAAS, and then spin up VMs on OpenStack, you 
 # need to significantly bump up RAM and CPUs for Cloud Nodes.
-CLOUD_NODE_CPUS   = 2  # vCPUs per Cloud Node
-CLOUD_NODE_MEMORY = 4300  # 4GB plus ~200MB headroom 
+CLOUD_NODE_CPUS   = 1  # vCPUs per Cloud Node
+CLOUD_NODE_MEMORY = 6300  # 6GB plus ~200MB headroom 
 
 # End of Configuration section -------------------------------------------------
 
@@ -70,6 +70,14 @@ Vagrant.configure("2") do |config|
     # manage power of Cloud Nodes.
     maas.vm.provision :file, 
       :source => './id_rsa', :destination => '/tmp/vagrant/id_rsa'
+
+    # Provision ~/.ssh/config file on maas for easier ssh to nodes
+    maas.vm.provision :file, 
+      :source => './maas-ssh-config', :destination => '/home/vagrant/.ssh/config'
+
+    # Provision ubuntu-bundle.yaml for MAAS demo
+    maas.vm.provision :file, 
+      :source => './apps-bundle.yaml', :destination => '/home/vagrant/apps-bundle.yaml'
 
     # Provision juju client configuration templates
     maas.vm.provision :file, 

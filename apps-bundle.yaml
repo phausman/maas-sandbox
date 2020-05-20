@@ -1,0 +1,28 @@
+series: bionic
+
+applications:
+
+  baremetal-app:
+    charm: cs:ubuntu
+    num_units: 1
+    constraints: spaces=management-space
+    bindings:
+      "": baremetal-space
+
+  kvm-app:
+    charm: cs:ubuntu
+    num_units: 1
+    constraints: spaces=management-space
+    bindings:
+      "": kvm-space
+    to:
+      - kvm:new
+
+  lxd-app:
+    charm: cs:ubuntu
+    num_units: 1
+    constraints: spaces=management-space
+    bindings:
+      "": lxd-space
+    to:
+      - lxd:new
