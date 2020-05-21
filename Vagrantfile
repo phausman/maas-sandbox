@@ -35,6 +35,10 @@ CLOUD_NODES_COUNT = 5
 CLOUD_NODE_CPUS   = 2  # vCPUs per Cloud Node
 CLOUD_NODE_MEMORY = 4300  # 4GB plus ~200MB headroom 
 
+# Local image mirror (See https://maas.io/docs/local-image-mirror)
+LOCAL_IMAGE_MIRROR_URL = ""
+# LOCAL_IMAGE_MIRROR_URL = "http://192.168.1.100/maas/images/ephemeral-v3/daily/"
+
 # End of Configuration section -------------------------------------------------
 
 Vagrant.configure("2") do |config|
@@ -100,7 +104,7 @@ Vagrant.configure("2") do |config|
         OAM_DYNAMIC_RANGE_START, OAM_DYNAMIC_RANGE_END,
         OAM_RESERVED_RANGE_START, OAM_RESERVED_RANGE_END, 
         HOST_USERNAME, HOST_IP, OAM_NETWORK_PREFIX,
-        CLOUD_NODES_COUNT
+        CLOUD_NODES_COUNT, LOCAL_IMAGE_MIRROR_URL
       ]
     end
 

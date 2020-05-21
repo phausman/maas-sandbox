@@ -11,6 +11,7 @@ set -xe
 # $7: HOST_IP
 # $8: OAM_NETWORK_PREFIX
 # $9: CLOUD_NODES_COUNT
+# $10: LOCAL_IMAGE_MIRROR_URL
 
 # Initialize MAAS
 echo "Initializing MAAS..."
@@ -27,13 +28,32 @@ fi
 # Wait until MAAS endpoint URL is available
 while nc -z localhost 5240 ; [ $? -ne 0 ] 
 do
-    echo "MAAS endpoint URL not available yet, waiting 3s..."
-    sleep 3
+    echo "MAAS endpoint URL is not available yet, waiting 10s..."
+    sleep 10
 done
 
 # Log into MAAS
 echo "Logging into MAAS..."
 maas login root http://localhost:5240/MAAS $(maas apikey --username root)
+
+# Use local image mirror, if configured
+if [ ! -z ${10} ]
+then
+    echo "Requesting MAAS to stop importing images before updating " \
+         "boot-source with local image mirror URL..."
+    maas root boot-resources stop-import
+
+    while [ $(maas root boot-resources is-importing) != "false" ]
+    do 
+        echo "MAAS is still importing images. Requesting MAAS to stop " \
+             "importing images (again) and waiting 30s..."
+        maas root boot-resources stop-import
+        sleep 30
+    done
+    
+    echo "Updating boot-source to point to local image mirror..."
+    maas root boot-source update 1 url="${10}"
+fi
 
 # Start importing images
 echo "Requesting MAAS to import images..."
@@ -90,13 +110,20 @@ maas root maas set-config name=boot_images_auto_import value=false
 echo "Waiting for MAAS to finish importing images..."
 while [ $(maas root boot-resources is-importing) != "false" ]
 do 
-    echo "MAAS is still importing images, waiting 3s..."
-    sleep 3
+    echo "MAAS is still importing images, waiting 30s..."
+    sleep 30
 done
 
-# Wait for «Syncing to rack controller(s)»
-echo "Waiting 45s for imported images to finish «Syncing to rack controller(s)»"; 
-sleep 45
+# Wait until Rack Controller finishes syncing images
+echo "Waiting for Rack Controller to finish synchronizing the images "; 
+RACK_CONTROLLER_ID=$(maas root region-controllers read | \
+    jq --raw-output '.[] | .system_id')
+while [ $(maas root rack-controller list-boot-images $RACK_CONTROLLER_ID | \
+    jq --raw-output '.status') != "synced" ]
+do 
+    echo "MAAS Rack is still synchronizing images, waiting 30s..."
+    sleep 30
+done
 
 # Create nodeNN nodes
 echo "Creating machines..."
