@@ -115,12 +115,12 @@ Vagrant.configure("2") do |config|
     end
 
     maas.vm.post_up_message = 
-      "Congratulations! MAAS server has been successfully installed and\n"\
-      "provisioned. Now, power cycle Cloud Nodes so that they start PXE\n"\
-      "booting by running this command:\n"\
-      "for i in $(seq 1 #{CLOUD_NODES_COUNT}); do sudo virsh reset node$(printf %02d ${i}); done"\
-      "\n\nYou can access MAAS GUI by visiting "\
-      "http://localhost:5240/MAAS\nUsername: root\nPassword: root"
+      "Congratulations! MAAS server has been successfully installed and\n" \
+      "provisioned. Commissioning of the Cloud Nodes is most likely in\n" \
+      "progress now.\n\n" \
+      "Access MAAS GUI by visiting " \
+      "http://localhost:5240/MAAS\n" \
+      "Username: root\nPassword: root"
 
   end
 

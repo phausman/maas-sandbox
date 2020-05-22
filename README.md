@@ -40,9 +40,7 @@ Cloud Nodes. Wait until Vagrant finishes provisioning.
 
 5.  Click "Go to dashboard" button.
 
-6.  Power cycle Cloud Nodes so that they start PXE booting.
-
-        (host)$ for i in $(seq 1 5); do sudo virsh reset node0${i}; done
+6.  Wait for machines to finish Commissioning.
     
     Observe how machines are booting via PXE and commissioning in MAAS. When 
     commissioning finishes, all nodes will report `Ready` status.

@@ -39,13 +39,13 @@ maas login root http://localhost:5240/MAAS $(maas apikey --username root)
 # Use local image mirror, if configured
 if [ ! -z ${10} ]
 then
-    echo "Requesting MAAS to stop importing images before updating " \
+    echo "Requesting MAAS to stop importing images before updating" \
          "boot-source with local image mirror URL..."
     maas root boot-resources stop-import
 
     while [ $(maas root boot-resources is-importing) != "false" ]
     do 
-        echo "MAAS is still importing images. Requesting MAAS to stop " \
+        echo "MAAS is still importing images. Requesting MAAS to stop" \
              "importing images (again) and waiting 30s..."
         maas root boot-resources stop-import
         sleep 30
@@ -142,5 +142,56 @@ do
             power_type=virsh power_parameters='{"power_address": "qemu+ssh://'${6}'@'${7}'/system", "power_id": "node'${NODE_NUM}'"}'
     else
         echo "Machine node${NODE_NUM} already exists, skipping"
+    fi
+done
+
+# Reset power of the machines so that they can start commissioning
+echo "Power cycling machines..."
+for i in $(seq 1 ${9})
+do
+    # Check if the machine exists
+    NODE_NUM=$(printf %02d ${i})
+    MACHINE=$(maas root machines read hostname=node${NODE_NUM} | \
+        jq --raw-output '.[] | .system_id')
+
+    if [ ! -z ${MACHINE} ]
+    then
+        # Query machine status
+        MACHINE_STATUS=$(maas root machine read ${MACHINE} | \
+            jq --raw-output '.status_name')
+
+        # Skip commissioning if the machine is already commissioned and
+        # in 'Ready' state
+        if [ ${MACHINE_STATUS} == "Ready" ]
+        then
+            echo "Machine \'node${NODE_NUM}\' (${MACHINE}) is already" \
+                 "commissioned, skipping..."
+            continue
+        fi
+
+        if [ ${MACHINE_STATUS} == "Commissioning" ]
+        then
+            # Abort automatic commissioning after the node has been created
+            maas root machine abort ${MACHINE}
+        fi
+
+        # Query power state
+        POWER_STATE=$(maas root machine query-power-state ${MACHINE} | \
+            jq --raw-output '.state')
+
+        # Power off the machine if it is on
+        while [ ${POWER_STATE} != "off" ]
+        do
+            echo "Powering off machine \'node${NODE_NUM}\' (${MACHINE})"
+            maas root machine power-off ${MACHINE}
+
+            POWER_STATE=$(maas root machine query-power-state ${MACHINE} | \
+                jq --raw-output '.state')
+        done
+
+        echo "Requesting commissioning of the machine \'node${NODE_NUM}\' (${MACHINE})"
+        maas root machine commission ${MACHINE}
+    else
+        echo "WARNING: Machine node${NODE_NUM} does not exist, skipping"
     fi
 done
