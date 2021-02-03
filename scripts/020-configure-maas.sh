@@ -17,10 +17,8 @@ set -xe
 echo "Initializing MAAS..."
 if ! (maas apikey --username root > /dev/null 2>&1)
 then
-    maas init --mode all --maas-url http://localhost:5240/MAAS/ \
-        --admin-username root \
-        --admin-password root \
-        --admin-email root@localhost.localdomain
+    maas init region+rack --maas-url http://localhost:5240/MAAS/
+    maas createadmin --username root --password root --email root@localhost.localdomain
 else
     echo "MAAS already initialized, skipping"
 fi
@@ -125,73 +123,33 @@ do
     sleep 30
 done
 
+# Create vm-host
+echo "Creating VM host (KVM)..."
+if ! (maas root pods read | jq -e '.[] | .id')
+then
+    maas root vm-hosts create type=virsh power_address=qemu+ssh://maas@192.168.122.1/system
+else
+    echo "VM host alread created, skipping..."
+fi
+
 # Create nodeNN nodes
 echo "Creating machines..."
+VM_HOST_ID=$(maas root pods read | jq --raw-output '.[] | .id')
 for i in $(seq 1 ${9})
 do
     # Check if the machine exists
     NODE_NUM=$(printf %02d ${i})
-    MACHINE=$(maas root machines read hostname=node${NODE_NUM} | jq '.[] | .system_id')
+    MACHINE=$(maas root machines read hostname=maas-node-${NODE_NUM} | jq '.[] | .system_id')
 
     if [ -z ${MACHINE} ]
     then
-        maas root machines create \
+        maas root pod compose ${VM_HOST_ID} \
             architecture="amd64/generic" \
             mac_addresses="0e:00:00:00:00:${NODE_NUM}" \
-            hostname=node${NODE_NUM} \
-            power_type=virsh power_parameters='{"power_address": "qemu+ssh://'${6}'@'${7}'/system", "power_id": "node'${NODE_NUM}'"}'
+            hostname=maas-node-${NODE_NUM}
     else
         echo "Machine node${NODE_NUM} already exists, skipping"
     fi
 done
 
-# Reset power of the machines so that they can start commissioning
-echo "Power cycling machines..."
-for i in $(seq 1 ${9})
-do
-    # Check if the machine exists
-    NODE_NUM=$(printf %02d ${i})
-    MACHINE=$(maas root machines read hostname=node${NODE_NUM} | \
-        jq --raw-output '.[] | .system_id')
-
-    if [ ! -z ${MACHINE} ]
-    then
-        # Query machine status
-        MACHINE_STATUS=$(maas root machine read ${MACHINE} | \
-            jq --raw-output '.status_name')
-
-        # Skip commissioning if the machine is already commissioned and
-        # in 'Ready' state
-        if [ ${MACHINE_STATUS} == "Ready" ]
-        then
-            echo "Machine \'node${NODE_NUM}\' (${MACHINE}) is already" \
-                 "commissioned, skipping..."
-            continue
-        fi
-
-        if [ ${MACHINE_STATUS} == "Commissioning" ]
-        then
-            # Abort automatic commissioning after the node has been created
-            maas root machine abort ${MACHINE}
-        fi
-
-        # Query power state
-        POWER_STATE=$(maas root machine query-power-state ${MACHINE} | \
-            jq --raw-output '.state')
-
-        # Power off the machine if it is on
-        while [ ${POWER_STATE} != "off" ]
-        do
-            echo "Powering off machine \'node${NODE_NUM}\' (${MACHINE})"
-            maas root machine power-off ${MACHINE}
-
-            POWER_STATE=$(maas root machine query-power-state ${MACHINE} | \
-                jq --raw-output '.state')
-        done
-
-        echo "Requesting commissioning of the machine \'node${NODE_NUM}\' (${MACHINE})"
-        maas root machine commission ${MACHINE}
-    else
-        echo "WARNING: Machine node${NODE_NUM} does not exist, skipping"
-    fi
-done
+# Machines will be autocommisioned when added
