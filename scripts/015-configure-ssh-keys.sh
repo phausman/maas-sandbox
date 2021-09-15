@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -xe
+set -e
 
 # Generate key if it not exist yet
 echo "Generating SSH key..."
@@ -16,7 +16,7 @@ fi
 # root user's home directory. This must be run after installing MAAS
 # snap because the key will be injected into snap-created directory. If we
 # had created this directory earlier, the snap would fail to install.
-echo "Installing host's private SSH key in /var/snap/maas/current/root/.ssh/id_rsa"
+echo "Installing host's private SSH key in /var/snap/maas/current/root/.ssh/id_rsa..."
 mkdir -p /var/snap/maas/current/root/.ssh
 mv /tmp/vagrant/id_rsa /var/snap/maas/current/root/.ssh/
 chown root:root /var/snap/maas/current/root/.ssh/id_rsa

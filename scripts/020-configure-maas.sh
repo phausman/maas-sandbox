@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -xe
+set -e
 
 # $1: MAAS_IP
 # $2: OAM_DYNAMIC_RANGE_START
