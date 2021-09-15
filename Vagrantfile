@@ -49,7 +49,7 @@ Vagrant.configure("2") do |config|
 
   # MAAS Server
   config.vm.define "maas", primary: true do |maas|
-    maas.vm.box = "generic/ubuntu1804"
+    maas.vm.box = "generic/ubuntu2004"
     maas.vm.hostname = "maas"
 
     # Forward MAAS GUI port for easier access
