@@ -96,6 +96,10 @@ Vagrant.configure("2") do |config|
     maas.vm.provision :shell,
       :path => './scripts/015-configure-ssh-keys.sh'
 
+    # Configure PostgreSQL
+    maas.vm.provision :shell,
+      :path => './scripts/019-configure-postrgesql.sh'
+
     # Configure MAAS
     maas.vm.provision "shell" do |s|
       s.path = './scripts/020-configure-maas.sh'

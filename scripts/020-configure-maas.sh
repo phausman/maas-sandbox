@@ -13,14 +13,18 @@ set -xe
 # $9: CLOUD_NODES_COUNT
 # $10: LOCAL_IMAGE_MIRROR_URL
 
+MAAS_DBUSER=maas
+MAAS_DBPASS=maas
+MAAS_DBNAME=maas
+
 # Initialize MAAS
 echo "Initializing MAAS..."
 if ! (maas apikey --username root > /dev/null 2>&1)
 then
-    maas init --mode all --maas-url http://localhost:5240/MAAS/ \
-        --admin-username root \
-        --admin-password root \
-        --admin-email root@localhost.localdomain
+    maas init region+rack \
+        --maas-url http://localhost:5240/MAAS/ \
+        --database-uri "postgres://$MAAS_DBUSER:$MAAS_DBPASS@localhost/$MAAS_DBNAME"
+    maas createadmin --username root --password root --email root@localhost.localdomain
 else
     echo "MAAS already initialized, skipping"
 fi
@@ -53,6 +57,15 @@ then
     
     echo "Updating boot-source to point to local image mirror..."
     maas root boot-source update 1 url="${10}"
+fi
+
+# Add Ubuntu 18.04 Bionic Beaver to boot sources if not already added
+if [ -z $(maas root boot-source-selections read 1 | \
+            jq '.[] | select(."release" == "bionic") | ."id"') ]
+then
+    maas root boot-source-selections create 1 \
+        os="ubuntu" release="bionic" arches="amd64" \
+        subarches="*" labels="*"
 fi
 
 # Start importing images
